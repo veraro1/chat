@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Widget Demo</title>
+    <style>
+        /* ===========================================
+           ESTILOS GENERALES
+        =========================================== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .demo-content {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 600px;
+        }
+
+        .demo-content h1 {
+            color: #2563eb;
+            margin-bottom: 20px;
+            font-size: 2.5em;
+        }
+
+        .demo-content p {
+            color: #6b7280;
+            font-size: 1.1em;
+            line-height: 1.6;
+        }
+
+        /* ===========================================
+           WIDGET FLOTANTE
+        =========================================== */
+        .chat-widget {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+
+        .chat-toggle {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #2563eb, #1e40af);
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 20px rgba(37, 99, 235, 0.4);
+            transition: all 0.3s ease;
+            color: white;
+            font-size: 24px;
+        }
+
+        .chat-toggle:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 25px rgba(37, 99, 235, 0.6);
+        }
+
+        .chat-toggle.active {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+        }
+
+        /* ===========================================
+           VENTANA DE CHAT
+        =========================================== */
+        .chat-window {
+            position: fixed;
+            bottom: 90px;
+            right: 20px;
+            width: 380px;
+            height: 500px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            z-index: 1001;
+            animation: slideUp 0.3s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .chat-header {
+            background: linear-gradient(135deg, #2563eb, #1e40af);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            position: relative;
+        }
+
+        .chat-header h3 {
+            margin: 0;
+            font-size: 1.2em;
+            font-weight: 600;
+        }
+
+        .chat-header p {
+            margin: 5px 0 0 0;
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #f8fafc;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .chat-messages::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .chat-messages::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 2px;
+        }
+
+        .message {
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            font-size: 0.9em;
+            line-height: 1.4;
+            word-wrap: break-word;
+            animation: messageSlide 0.3s ease-out;
+        }
+
+        @keyframes messageSlide {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.user {
+            background: #2563eb;
+            color: white;
+            align-self: flex-end;
+            margin-left: auto;
+        }
+
+        .message.bot {
+            background: white;
+            color: #374151;
+            align-self: flex-start;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .typing-indicator {
+            background: white;
+            color: #6b7280;
+            align-self: flex-start;
+            border: 1px solid #e5e7eb;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-style: italic;
+        }
+
+        .typing-dots {
+            display: flex;
+            gap: 3px;
+        }
+
+        .typing-dot {
+            width: 6px;
+            height: 6px;
+            background: #9ca3af;
+            border-radius: 50%;
+            animation: typingDot 1.4s infinite;
+        }
+
+        .typing-dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes typingDot {
+            0%, 60%, 100% {
+                opacity: 0.4;
+                transform: scale(0.8);
+            }
+            30% {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .error-message {
+            background: #fef2f2;
+            color: #dc2626;
+            border: 1px solid #fecaca;
+            align-self: flex-start;
+            font-size: 0.85em;
+        }
+
+        /* ===========================================
+           BARRA DE ENVÍO
+        =========================================== */
+        .chat-input {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #e5e7eb;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .chat-input input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 1px solid #d1d5db;
+            border-radius: 24px;
+            font-size: 0.9em;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        .chat-input input:focus {
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .send-button {
+            width: 44px;
+            height: 44px;
+            background: #2563eb;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 18px;
+            transition: all 0.2s ease;
+        }
+
+        .send-button:hover {
+            background: #1e40af;
+            transform: scale(1.05);
+        }
+
+        .send-button:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* ===========================================
+           RESPONSIVE
+        =========================================== */
+        @media (max-width: 480px) {
+            .chat-window {
+                position: fixed;
+                bottom: 0;
+                right: 0;
+                left: 0;
+                top: 0;
+                width: 100%;
+                height: 100%;
+                border-radius: 0;
+            }
+
+            .chat-toggle {
+                bottom: 20px;
+                right: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- ===========================================
+         CONTENIDO DE DEMO
+    =========================================== -->
+    <div class="demo-content">
+        <h1>🚀 Chat Widget Demo</h1>
+        <p>
+            Este es un ejemplo de página web con el chat widget integrado. 
+            El botón flotante aparece en la esquina inferior derecha.
+            <br><br>
+            <strong>Haz clic en el botón azul para abrir el chat y comenzar a conversar.</strong>
+        </p>
+    </div>
+
+    <!-- ===========================================
+         WIDGET DE CHAT
+    =========================================== -->
+    <div class="chat-widget">
+        <!-- Botón flotante para abrir/cerrar el chat -->
+        <button class="chat-toggle" id="chatToggle">
+            <span id="chatIcon">💬</span>
+        </button>
+
+        <!-- Ventana de chat -->
+        <div class="chat-window" id="chatWindow">
+            <!-- Cabecera del chat -->
+            <div class="chat-header">
+                <h3>Asistente Virtual</h3>
+                <p>¡Hola! ¿En qué puedo ayudarte?</p>
+            </div>
+
+            <!-- Área de mensajes -->
+            <div class="chat-messages" id="chatMessages">
+                <div class="message bot">
+                    ¡Hola! Soy tu asistente virtual. ¿En qué puedo ayudarte hoy?
+                </div>
+            </div>
+
+            <!-- Barra de input -->
+            <div class="chat-input">
+                <input 
+                    type="text" 
+                    id="messageInput" 
+                    placeholder="Escribe tu mensaje..."
+                    autocomplete="off"
+                >
+                <button class="send-button" id="sendButton">
+                    ➤
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /* ===========================================
+           VARIABLES GLOBALES
+        =========================================== */
+        const WEBHOOK_URL = 'https://work.infinitewebai.space/webhook/e9df9544-ee5f-404c-b208-aa6424b8406e';
+        
+        // Elementos del DOM
+        const chatToggle = document.getElementById('chatToggle');
+        const chatWindow = document.getElementById('chatWindow');
+        const chatMessages = document.getElementById('chatMessages');
+        const messageInput = document.getElementById('messageInput');
+        const sendButton = document.getElementById('sendButton');
+        const chatIcon = document.getElementById('chatIcon');
+
+        // Estado del chat
+        let isOpen = false;
+        let isWaitingResponse = false;
+
+        /* ===========================================
+           FUNCIONES DE INTERFAZ
+        =========================================== */
+        
+        // Alternar visibilidad del chat
+        function toggleChat() {
+            isOpen = !isOpen;
+            
+            if (isOpen) {
+                chatWindow.style.display = 'flex';
+                chatToggle.classList.add('active');
+                chatIcon.textContent = '✕';
+                messageInput.focus();
+            } else {
+                chatWindow.style.display = 'none';
+                chatToggle.classList.remove('active');
+                chatIcon.textContent = '💬';
+            }
+        }
+
+        // Añadir mensaje al chat
+        function addMessage(content, isUser = false, isError = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user' : 'bot'}`;
+            
+            if (isError) {
+                messageDiv.className = 'message error-message';
+            }
+            
+            messageDiv.textContent = content;
+            chatMessages.appendChild(messageDiv);
+            
+            // Auto-scroll al final
+            scrollToBottom();
+        }
+
+        // Mostrar indicador de "escribiendo..."
+        function showTypingIndicator() {
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'message typing-indicator';
+            typingDiv.id = 'typingIndicator';
+            
+            typingDiv.innerHTML = `
+                Escribiendo...
+                <div class="typing-dots">
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                </div>
+            `;
+            
+            chatMessages.appendChild(typingDiv);
+            scrollToBottom();
+        }
+
+        // Ocultar indicador de "escribiendo..."
+        function hideTypingIndicator() {
+            const typingIndicator = document.getElementById('typingIndicator');
+            if (typingIndicator) {
+                typingIndicator.remove();
+            }
+        }
+
+        // Scroll automático al final
+        function scrollToBottom() {
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Habilitar/deshabilitar input
+        function setInputEnabled(enabled) {
+            messageInput.disabled = !enabled;
+            sendButton.disabled = !enabled;
+            isWaitingResponse = !enabled;
+        }
+
+        /* ===========================================
+           FUNCIONES DE COMUNICACIÓN
+        =========================================== */
+        
+        // Enviar mensaje al webhook
+        async function sendMessage(message) {
+            try {
+                const response = await fetch(WEBHOOK_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        timestamp: new Date().toISOString()
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Error HTTP: ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                // Extraer la respuesta del bot
+                let botResponse = 'Lo siento, no pude procesar tu mensaje.';
+                
+                if (data.response) {
+                    botResponse = data.response;
+                } else if (data.message) {
+                    botResponse = data.message;
+                } else if (typeof data === 'string') {
+                    botResponse = data;
+                }
+
+                return botResponse;
+                
+            } catch (error) {
+                console.error('Error al enviar mensaje:', error);
+                throw error;
+            }
+        }
+
+        // Procesar envío de mensaje
+        async function handleSendMessage() {
+            const message = messageInput.value.trim();
+            
+            if (!message || isWaitingResponse) {
+                return;
+            }
+
+            // Limpiar input y deshabilitar
+            messageInput.value = '';
+            setInputEnabled(false);
+
+            // Añadir mensaje del usuario
+            addMessage(message, true);
+
+            // Mostrar indicador de escribiendo
+            showTypingIndicator();
+
+            try {
+                // Enviar mensaje al webhook
+                const botResponse = await sendMessage(message);
+                
+                // Ocultar indicador y mostrar respuesta
+                hideTypingIndicator();
+                addMessage(botResponse, false);
+                
+            } catch (error) {
+                // Ocultar indicador y mostrar error
+                hideTypingIndicator();
+                addMessage('❌ Error de conexión. Por favor, intenta de nuevo.', false, true);
+            } finally {
+                // Rehabilitar input
+                setInputEnabled(true);
+                messageInput.focus();
+            }
+        }
+
+        /* ===========================================
+           EVENT LISTENERS
+        =========================================== */
+        
+        // Toggle del chat
+        chatToggle.addEventListener('click', toggleChat);
+
+        // Enviar mensaje con botón
+        sendButton.addEventListener('click', handleSendMessage);
+
+        // Enviar mensaje con Enter
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                handleSendMessage();
+            }
+        });
+
+        // Cerrar chat al hacer clic fuera (opcional)
+        document.addEventListener('click', (e) => {
+            if (isOpen && !chatWindow.contains(e.target) && !chatToggle.contains(e.target)) {
+                // Descomenta la siguiente línea si quieres que se cierre al hacer clic fuera
+                // toggleChat();
+            }
+        });
+
+        /* ===========================================
+           INICIALIZACIÓN
+        =========================================== */
+        
+        // Configuración inicial
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🚀 Chat Widget inicializado correctamente');
+            console.log('📡 Webhook URL:', WEBHOOK_URL);
+            
+            // Focus en el input cuando se abre el chat
+            messageInput.addEventListener('focus', () => {
+                setTimeout(() => {
+                    scrollToBottom();
+                }, 100);
+            });
+        });
+    </script>
+</body>
+</html>
